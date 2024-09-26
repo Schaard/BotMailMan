@@ -10,22 +10,24 @@ def handler(event, context):
     
     application_id = event['application_id']
     interaction_token = event['interaction_token']
-    follow_up_messages = event['follow_up_messages']
+    messages = event['messages']
     interaction_id = event['id']
     message_id = event['message_id']
+    remove_all_buttons = event['remove_all_buttons']
 
-    for message in follow_up_messages:
-        send_message(interaction_id, interaction_token, message)
+    for message in messages:
+        send_initial_message(interaction_id, interaction_token, message)
         #send_followup_message(application_id, interaction_token, message)
         
-    remove_button(application_id, interaction_token, message_id)
+    if remove_all_buttons:
+        remove_buttons(application_id, interaction_token, message_id)
 
     return {
         "statusCode": 200,
         "body": json.dumps("Mailman activity complete")
     }
 
-def send_message(interaction_id, interaction_token, content):
+def send_initial_message(interaction_id, interaction_token, content):
     url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
         
     payload = {
@@ -56,7 +58,7 @@ def send_followup_message(application_id, interaction_token, content):
         logger.info("Follow-up message sent successfully")
 
         # Function to remove the button from the original message by editing it
-def remove_button(application_id, interaction_token, message_id):
+def remove_buttons(application_id, interaction_token, message_id):
     url = f"https://discord.com/api/v10/webhooks/{application_id}/{interaction_token}/messages/{message_id}"
     
     # Payload to remove components (i.e., buttons)
