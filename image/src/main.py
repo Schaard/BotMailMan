@@ -10,14 +10,19 @@ def handler(event, context):
     
     application_id = event['application_id']
     interaction_token = event['interaction_token']
-    messages = event['messages']
+    message = event['messages']
+    embed = event['embeds']
     interaction_id = event['id']
     message_id = event['message_id']
     remove_all_buttons = event['remove_all_buttons']
+    
 
-    for message in messages:
+    logger.info(f"Embed: {embed}")     
+    if embed is not None:
+        send_initial_embed(interaction_id, interaction_token, embed)
+    
+    if message is not None:
         send_initial_message(interaction_id, interaction_token, message)
-        #send_followup_message(application_id, interaction_token, message)
         
     if remove_all_buttons:
         remove_buttons(application_id, interaction_token, message_id)
@@ -39,10 +44,29 @@ def send_initial_message(interaction_id, interaction_token, content):
     
     response = requests.post(url, json=payload)
 
-    if response.status_code != 200:
-        logger.error(f"Failed ({response}) to send message: {response.text} to url: {url}")
+    if response.status_code in [200, 204]:
+        logger.info(f"Message sent successfully to url: {url}")
     else:
-        logger.info("Message sent successfully")
+        logger.error(f"Failed ({response.status_code}) to send message: {response.text} to url: {url}")
+
+
+
+def send_initial_embed(interaction_id, interaction_token, embed):
+    url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
+        
+    payload = {
+        "type": 4,
+        "data": {
+            "embeds": [embed]
+        }
+    }
+    
+    response = requests.post(url, json=payload)
+
+    if response.status_code in [200, 204]:
+        logger.info(f"Message sent successfully to url: {url}")
+    else:
+        logger.error(f"Failed ({response.status_code}) to send message: {response.text} to url: {url}")
 
 def send_followup_message(application_id, interaction_token, content):
     url = f"https://discord.com/api/v10/webhooks/{application_id}/{interaction_token}"
@@ -52,23 +76,35 @@ def send_followup_message(application_id, interaction_token, content):
     }
     
     response = requests.post(url, json=payload)
-    if response.status_code != 200:
-        logger.error(f"Failed (response: {response.text}) to send follow-up message {payload} to {url}")
+    if response.status_code in [200, 204]:
+        logger.info(f"Message sent successfully to url: {url}")
     else:
-        logger.info("Follow-up message sent successfully")
+        logger.error(f"Failed ({response.status_code}) to send message: {response.text} to url: {url}")
 
-        # Function to remove the button from the original message by editing it
+def send_followup_embed(application_id, interaction_token, embed):
+    url = f"https://discord.com/api/v10/webhooks/{application_id}/{interaction_token}"
+    
+    payload = {
+        "embeds": embed
+    }
+    
+    response = requests.post(url, json=payload)
+    if response.status_code in [200, 204]:
+        logger.info(f"Message sent successfully to url: {url}")
+    else:
+        logger.error(f"Failed ({response.status_code}) to send message: {response.text} to url: {url}")
+
 def remove_buttons(application_id, interaction_token, message_id):
     url = f"https://discord.com/api/v10/webhooks/{application_id}/{interaction_token}/messages/{message_id}"
     
-    # Payload to remove components (i.e., buttons)
     payload = {
         "components": []  # Empty components array to remove buttons
     }
 
     response = requests.patch(url, json=payload)
     
-    if response.status_code != 200:
-        logger.error(f"Failed to remove button: {response.text}")
+    if response.status_code in [200, 204]:
+        logger.info(f"Message sent successfully to url: {url}")
     else:
-        logger.info("Button removed successfully")
+        logger.error(f"Failed ({response.status_code}) to send message: {response.text} to url: {url}")
+
